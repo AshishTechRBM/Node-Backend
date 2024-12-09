@@ -88,6 +88,7 @@ io.on('connection', async (socket) => {
       console.log('Binary Stream Incoming...');
       if (!ffmpegProcess.stdin.killed) {
         ffmpegProcess.stdin.write(stream, (err) => {
+          console.log("Starting Comming binary stream");
           socket.emit('Comming binary stream', stream);
           console.log("Comming binary stream");
           if (err) {
