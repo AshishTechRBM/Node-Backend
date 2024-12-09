@@ -10,6 +10,9 @@ COPY package*.json ./
 # Install Node.js dependencies
 RUN npm install
 
+# Install NPM version 
+RUN npm install -g npm@10.9.2
+
 # Copy the rest of the application code
 COPY . .
 
