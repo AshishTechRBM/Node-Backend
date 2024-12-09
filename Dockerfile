@@ -13,6 +13,9 @@ RUN npm install
 # Install NPM version 
 RUN npm install -g npm@10.9.2
 
+# Install ffMPEG Package
+run npm i ffmpeg
+
 # Copy the rest of the application code
 COPY . .
 
