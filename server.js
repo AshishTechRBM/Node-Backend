@@ -84,17 +84,20 @@ io.on('connection', async (socket) => {
 
   // Handle incoming video data (binary stream)
   socket.on('binarystream', (stream) => {
-    if (ffmpegProcess) {
+    if (ffmpegProcess && !ffmpegProcess.killed) {
       console.log('Binary Stream Incoming...');
-      ffmpegProcess.stdin.write(stream, (err) => {
-        socket.emit('Comming binary stream', stream);
-        if (err) {
-          console.error('Error writing stream to FFmpeg:', err);
-        }
-      });
+      if (!ffmpegProcess.stdin.killed) {
+        ffmpegProcess.stdin.write(stream, (err) => {
+          socket.emit('Comming binary stream', stream);
+          if (err) {
+            console.error('Error writing stream to FFmpeg:', err);
+          }
+        });
+      }
+
     } else {
-      console.error('FFmpeg process not initialized.');
-      socket.emit('error binary stream', 'Could not create binary stream.');
+      console.error('FFmpeg process is not active or has been terminated.');
+      socket.emit('error', { message: 'FFmpeg process is not active or has been terminated.' });
     }
   });
   
