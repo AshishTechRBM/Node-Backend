@@ -1,3 +1,4 @@
+require('dotenv').config();
 const Mux = require('@mux/mux-node');
 const http = require('http');
 const ffmpeg = require('fluent-ffmpeg');
@@ -8,7 +9,6 @@ const cors = require('cors');
 // ffmpeg-static configuration
 const ffmpegPath = require('ffmpeg-static'); // Import ffmpeg-static
 ffmpeg.setFfmpegPath(ffmpegPath);
-
 
 // Create Express app
 const app = express();
@@ -21,7 +21,7 @@ app.use(cors({
   credentials: true // Allow cookies and headers
 }));
 
-let port = process.env.PORT;
+let port = process.env.PORT || 3000;
 let ffmpegProcess = null; // Store ffmpeg process here
 
 // Socket.io server with CORS configuration
@@ -30,8 +30,10 @@ const io = new Server(server, {
     origin: "*",  // Allow Angular frontend
     methods: ["GET", "POST"],
     credentials: true // Ensure credentials are allowed for cross-origin requests
-  }
- // transports: ['polling', 'websocket'] // Support both WebSocket and polling
+  },
+  maxHttpBufferSize: 4e6 // 4Mb
+
+  // transports: ['polling', 'websocket'] // Support both WebSocket and polling
 
 });
 
@@ -43,7 +45,7 @@ io.on('connection', async (socket) => {
   socket.on('streamKey', (streamKey) => {
     console.log(`Received Stream Key: ${streamKey}`);
     socket.emit(`Received Stream Key: ${streamKey}`);
-    const rtmpUrl = `rtmps://global-live.mux.com:443/app/${streamKey}`;
+    const rtmpUrl = `rtmp://global-live.mux.com:5222/app/${streamKey}`;
 
     // Prepare FFmpeg options with dynamic RTMP URL
     const options = [
@@ -80,28 +82,31 @@ io.on('connection', async (socket) => {
     ffmpegProcess.on('close', (code) => {
       console.log(`ffmpeg process exited with code ${code}`);
     });
+    process.on('uncaughtException', (err, origin) => {
+      //code to log the errors
+      console.log(
+        `Caught exception: ${err}\n` +
+        `Exception origin: ${origin}`,
+      );
+    });
   });
 
   // Handle incoming video data (binary stream)
   socket.on('binarystream', (stream) => {
-    if (ffmpegProcess && !ffmpegProcess.killed) {
+    if (ffmpegProcess) {
       console.log('Binary Stream Incoming...');
-      if (!ffmpegProcess.stdin.killed) {
-        ffmpegProcess.stdin.write(stream, (err) => {
-          console.log("Starting Comming binary stream");
-         
-          if (err) {
-            console.error('Error writing stream to FFmpeg:', err);
-          }
-        });
-      }
-
+      ffmpegProcess.stdin.write(stream, (err) => {
+        socket.emit('Comming binary stream', stream);
+        if (err) {
+          console.error('Error writing stream to FFmpeg:', err);
+        }
+      });
     } else {
-      console.error('FFmpeg process is not active or has been terminated.');
-      socket.emit('error', { message: 'FFmpeg process is not active or has been terminated.' });
+      console.error('FFmpeg process not initialized.');
+      socket.emit('error binary stream', 'Could not create binary stream.');
     }
   });
-  
+
   socket.on('cameraToggle', (data) => {
     console.log(`Camera state changed: ${data.isCameraOn ? 'ON' : 'OFF'}`);
     // Optionally handle state change on the server
@@ -122,7 +127,6 @@ io.on('connection', async (socket) => {
     }
   });
 });
-
 app.get("/", (req,res) =>{
   res.send("<h1>Hello World</h1>")
 });
