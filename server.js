@@ -31,7 +31,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true // Ensure credentials are allowed for cross-origin requests
   },
-  maxHttpBufferSize: 4e6 // 4Mb
+  // maxHttpBufferSize: 4e6 // 4Mb
 
   // transports: ['polling', 'websocket'] // Support both WebSocket and polling
 
@@ -45,7 +45,7 @@ io.on('connection', async (socket) => {
   socket.on('streamKey', (streamKey) => {
     console.log(`Received Stream Key: ${streamKey}`);
     socket.emit(`Received Stream Key: ${streamKey}`);
-    const rtmpUrl = `rtmp://global-live.mux.com:5222/app/${streamKey}`;
+    const rtmpUrl = `rtmps://global-live.mux.com:443/app/${streamKey}`;
 
     // Prepare FFmpeg options with dynamic RTMP URL
     const options = [
@@ -71,9 +71,9 @@ io.on('connection', async (socket) => {
     // Start the FFmpeg process
     ffmpegProcess = spawn(ffmpegPath, options);
 
-    ffmpegProcess.stdout.on('data', (data) => {
-      console.log(`ffmpeg stdout: ${data}`);
-    });
+    // ffmpegProcess.stdout.on('data', (data) => {
+    //   console.log(`ffmpeg stdout: ${data}`);
+    // });
 
     ffmpegProcess.stderr.on('data', (data) => {
       console.error(`ffmpeg stderr: ${data}`);
@@ -82,28 +82,23 @@ io.on('connection', async (socket) => {
     ffmpegProcess.on('close', (code) => {
       console.log(`ffmpeg process exited with code ${code}`);
     });
-    process.on('uncaughtException', (err, origin) => {
-      //code to log the errors
-      console.log(
-        `Caught exception: ${err}\n` +
-        `Exception origin: ${origin}`,
-      );
-    });
+   
   });
 
   // Handle incoming video data (binary stream)
   socket.on('binarystream', (stream) => {
-    if (ffmpegProcess) {
+    if (ffmpegProcess.stdin.writable) {
       console.log('Binary Stream Incoming...');
-      ffmpegProcess.stdin.write(stream, (err) => {
-        socket.emit('Comming binary stream', stream);
-        if (err) {
-          console.error('Error writing stream to FFmpeg:', err);
-        }
-      });
+      ffmpegProcess.stdin.write(stream);//, (err) => {
+        //socket.emit('Comming binary stream', stream);
+        // (err) {
+         // console.error('Error writing stream to FFmpeg:', err);
+        //}
+      //});
     } else {
-      console.error('FFmpeg process not initialized.');
-      socket.emit('error binary stream', 'Could not create binary stream.');
+      console.error('FFmpeg stdin is not writable.');
+      // console.error('FFmpeg process not initialized.');
+      // socket.emit('error binary stream', 'Could not create binary stream.');
     }
   });
 
