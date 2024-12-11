@@ -14,7 +14,7 @@ RUN npm install
 RUN npm install -g npm@10.8.2
 
 # Install ffMPEG Package
-run npm i ffmpeg
+run npm i ffmpeg-static
 
 # Copy the rest of the application code
 COPY . .
