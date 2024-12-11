@@ -8,16 +8,15 @@ const express = require('express');
 const cors = require('cors');
 // ffmpeg-static configuration
 const ffmpegPath = require('ffmpeg-static'); // Import ffmpeg-static
-ffmpeg.setFfmpegPath(ffmpegPath);
+
+
+//const ffmpegPath = path.resolve(__dirname, 'ffmpeg/ffmpeg.exe');
+// const ffmpegPath = 'https://stgfanmire.blob.core.windows.net/livestreaming/ffmpeg.exe';
+ffmpeg.setFfmpegPath('ffmpegPath');
+
 
 // Create Express app
 const app = express();
-
-app.get("/", (req,res) =>{
-  res.send("<h1>Hello Fanmire</h1>")
-});
-
-let port = process.env.PORT;
 const server = http.createServer(app);
 
 // CORS middleware for Express routes
@@ -27,7 +26,7 @@ app.use(cors({
   credentials: true // Allow cookies and headers
 }));
 
-
+let port = process.env.PORT || 3000;
 let ffmpegProcess = null; // Store ffmpeg process here
 
 // Socket.io server with CORS configuration
@@ -37,101 +36,77 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true // Ensure credentials are allowed for cross-origin requests
   },
-  // maxHttpBufferSize: 4e6 // 4Mb
-
-  // transports: ['polling', 'websocket'] // Support both WebSocket and polling
+  //transports: ['polling'] // Support both WebSocket and polling
 
 });
 
 // Socket.io connection and stream handling
-io.on('connection', async (socket) => {
+io.on('connection', (socket) => {
   console.log('Socket Connected', socket.id);
   socket.emit('Socket Connected', socket.id);
-  // Handle streaming with provided stream key
+  
+  let ffmpegProcess = null;
+
   socket.on('streamKey', (streamKey) => {
     console.log(`Received Stream Key: ${streamKey}`);
-    socket.emit(`Received Stream Key: ${streamKey}`);
+    
+    if (!streamKey || typeof streamKey !== 'string') {
+      console.error('Invalid stream key');
+      socket.emit('error', { message: 'Invalid stream key' });
+      return;
+    }
+    
     const rtmpUrl = `rtmps://global-live.mux.com:443/app/${streamKey}`;
-
-    // Prepare FFmpeg options with dynamic RTMP URL
     const options = [
-      '-loglevel', 'debug',
-      '-i', 'pipe:0',
+      '-i', '-',
       '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-tune', 'zerolatency',
-      '-r', '25',
-      '-g', '50',
-      '-keyint_min', '25',
-      '-crf', '25',
-      '-pix_fmt', 'yuv420p',
-      '-sc_threshold', '0',
-      '-profile:v', 'main',
-      '-level', '3.1',
-      '-c:a', 'aac',
-      '-b:a', '128k',
-      '-ar', '44100',
+      '-preset', 'ultrafast',
       '-f', 'flv',
       rtmpUrl,
     ];
 
-    // Start the FFmpeg process
     ffmpegProcess = spawn(ffmpegPath, options);
 
-    // ffmpegProcess.stdout.on('data', (data) => {
-    //   console.log(`ffmpeg stdout: ${data}`);
-    // });
-
     ffmpegProcess.stderr.on('data', (data) => {
-      console.error(`ffmpeg stderr: ${data}`);
+      const errorMessage = data.toString();
+      if (errorMessage.includes('error')) {
+        console.error(`FFmpeg error: ${errorMessage}`);
+      }
     });
 
     ffmpegProcess.on('close', (code) => {
-      console.log(`ffmpeg process exited with code ${code}`);
+      console.log(`FFmpeg process exited with code ${code}`);
+      ffmpegProcess = null;
     });
-   // Handle FFmpeg errors
-ffmpegProcess.on('error', (error) => {
-    console.error('FFmpeg process error:', error);
-});
+
+    ffmpegProcess.on('error', (err) => {
+      console.error('FFmpeg process error:', err);
+      ffmpegProcess = null;
+    });
   });
 
-  // Handle incoming video data (binary stream)
   socket.on('binarystream', (stream) => {
-    if (ffmpegProcess.stdin.writable) {
-      console.log('Binary Stream Incoming...');
-      ffmpegProcess.stdin.write(stream);//, (err) => {
-        //socket.emit('Comming binary stream', stream);
-        // (err) {
-         // console.error('Error writing stream to FFmpeg:', err);
-        //}
-      //});
+    if (ffmpegProcess && !ffmpegProcess.killed && !ffmpegProcess.stdin.destroyed) {
+      ffmpegProcess.stdin.write(stream, (err) => {
+        if (err) {
+          console.error('Error writing stream to FFmpeg:', err);
+        }
+      });
     } else {
-      console.error('FFmpeg stdin is not writable.');
-      // console.error('FFmpeg process not initialized.');
-      // socket.emit('error binary stream', 'Could not create binary stream.');
+      socket.emit('error', { message: 'FFmpeg process is not active or has been terminated.' });
     }
   });
 
-  socket.on('cameraToggle', (data) => {
-    console.log(`Camera state changed: ${data.isCameraOn ? 'ON' : 'OFF'}`);
-    // Optionally handle state change on the server
-  });
-  socket.on('micToggle', (data) => {
-    console.log(`Audio state changed: ${data.isMicrophoneOn ? 'ON' : 'OFF'}`);
-    // Optionally handle state change on the server
-  });
-
-  // Handle socket disconnection
-  socket.on('disconnect', () => {
+  socket.once('disconnect', () => {
     console.log('Socket Disconnected', socket.id);
-    socket.emit('Socket disconnected', socket.id);
     if (ffmpegProcess) {
-      ffmpegProcess.stdin.end();
-      ffmpegProcess.kill('SIGINT');
+      try { ffmpegProcess.stdin.end(); } catch {}
+      try { ffmpegProcess.kill('SIGINT'); } catch {}
       ffmpegProcess = null;
     }
   });
 });
+
 
 // Start the server
 server.listen(port, () => {
