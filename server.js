@@ -1,5 +1,3 @@
-require('dotenv').config();
-const Mux = require('@mux/mux-node');
 const http = require('http');
 const ffmpeg = require('fluent-ffmpeg');
 const { Server } = require('socket.io');
