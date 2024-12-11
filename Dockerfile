@@ -23,7 +23,7 @@ COPY . .
 RUN npm install -g nodemon
 
 # Expose the port the app runs on
-EXPOSE 3000
+EXPOSE 500
 
 # Use nodemon for auto-restarting the app in development
 CMD ["node", "server.js"]
