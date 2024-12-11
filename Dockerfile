@@ -1,4 +1,4 @@
-# Use an official Ubuntu focal image as the base
+# Use an official Node.js image as the base
 FROM node:20
 
 # Set working directory
@@ -8,24 +8,21 @@ WORKDIR /home/app
 COPY package*.json ./
 
 # Install Node.js dependencies
-RUN npm install
+RUN npm install \
+    && npm install -g npm@10.8.2 \
+    && npm install -g nodemon
 
-# Install NPM version 
-RUN npm install -g npm@10.8.2
-
-# Install ffMPEG Package
-docker build -t ffplay:latest .
+# Install ffmpeg package
+RUN apt-get update \
+    && apt-get install -y ffmpeg libavcodec-extra \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy the rest of the application code
 COPY . .
 
-# Install nodemon globally
-RUN npm install -g nodemon
-
 # Expose the port the app runs on
 EXPOSE 500
 
-# Use nodemon for auto-restarting the app in development
+# Start the application
 CMD ["node", "server.js"]
-
-
