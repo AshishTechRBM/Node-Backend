@@ -10,6 +10,12 @@ ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Create Express app
 const app = express();
+
+app.get("/", (req,res) =>{
+  res.send("<h1>Hello Fanmire</h1>")
+});
+
+let port = process.env.PORT || 3000;
 const server = http.createServer(app);
 
 // CORS middleware for Express routes
@@ -19,7 +25,7 @@ app.use(cors({
   credentials: true // Allow cookies and headers
 }));
 
-let port = process.env.PORT;
+
 let ffmpegProcess = null; // Store ffmpeg process here
 
 // Socket.io server with CORS configuration
@@ -123,9 +129,6 @@ ffmpegProcess.on('error', (error) => {
       ffmpegProcess = null;
     }
   });
-});
-app.get("/", (req,res) =>{
-  res.send("<h1>Hello World</h1>")
 });
 
 // Start the server
