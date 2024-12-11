@@ -7,16 +7,18 @@ WORKDIR /home/app
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install Node.js dependencies
-RUN npm install \
-    && npm install -g npm@10.8.2 \
-    && npm install -g nodemon
+# Install project dependencies
+RUN npm install
 
-# Install ffmpeg package
-RUN apt-get update \
-    && apt-get install -y ffmpeg libavcodec-extra \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Install Node.js dependencies
+RUN npm install -g npm@10.9.2
+
+# Install apt-utils to suppress the debconf warning
+RUN apt-get update && apt-get install -y apt-utils
+
+# Install FFmpeg
+RUN apt-get install -y ffmpeg
+
 
 # Copy the rest of the application code
 COPY . .
