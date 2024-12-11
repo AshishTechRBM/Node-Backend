@@ -17,7 +17,7 @@ app.get("/", (req,res) =>{
   res.send("<h1>Hello Fanmire</h1>")
 });
 
-let port = process.env.PORT || 3000;
+let port = process.env.PORT;
 const server = http.createServer(app);
 
 // CORS middleware for Express routes
