@@ -47,9 +47,10 @@ io.on('connection', async (socket) => {
 
     // Prepare FFmpeg options with dynamic RTMP URL
     const options = [
-      '-i', '-',
+      '-loglevel', 'debug',
+      '-i', 'pipe:0',
       '-c:v', 'libx264',
-      '-preset', 'ultrafast',
+      '-preset', 'veryfast',
       '-tune', 'zerolatency',
       '-r', '25',
       '-g', '50',
@@ -80,7 +81,10 @@ io.on('connection', async (socket) => {
     ffmpegProcess.on('close', (code) => {
       console.log(`ffmpeg process exited with code ${code}`);
     });
-   
+   // Handle FFmpeg errors
+ffmpegProcess.on('error', (error) => {
+    console.error('FFmpeg process error:', error);
+});
   });
 
   // Handle incoming video data (binary stream)
