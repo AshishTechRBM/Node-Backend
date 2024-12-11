@@ -1,24 +1,28 @@
 # Use an official Node.js image as the base
 FROM node:20
 
+# Set environment variable for non-interactive installation
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Set working directory
 WORKDIR /home/app
 
 # Copy package.json and package-lock.json
 COPY package*.json ./
 
-# Install project dependencies
-RUN npm install
-
 # Install Node.js dependencies
-RUN npm install -g npm@10.9.2
+RUN npm install \
+    && npm install -g npm@10.9.2 \
+    && npm install -g nodemon
 
-# Install apt-utils to suppress the debconf warning
-RUN apt-get update && apt-get install -y apt-utils
+# Install ffmpeg and related packages
+RUN apt-get update \
+    && apt-get install -y apt-utils ffmpeg libavcodec-extra \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install FFmpeg
-RUN apt-get install -y ffmpeg
-
+# Reset DEBIAN_FRONTEND to default
+ENV DEBIAN_FRONTEND=dialog
 
 # Copy the rest of the application code
 COPY . .
