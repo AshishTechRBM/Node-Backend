@@ -19,7 +19,7 @@ app.use(cors({
   credentials: true // Allow cookies and headers
 }));
 
-let port = process.env.PORT || 3000;
+let port = process.env.PORT;
 let ffmpegProcess = null; // Store ffmpeg process here
 
 // Socket.io server with CORS configuration
