@@ -7,12 +7,12 @@ const app = express();
 app.use(cors());  // Enable CORS for all routes
 app.use(express.json());
 
-const subscriptionId = 'da1fcdce-4d95-44a0-a4e7-0f0b53c6bc26';
+const subscriptionId = '00000000-0000-0000-0000-000000000000';
 const resourceGroupName  = 'Fanmire_Platform';
 const imageName = 'fanmire-node-backend:v1';
 const acrServer = 'fanmireregistry.azurecr.io';
 const acrUsername = 'FanmireRegistry';
-const acrPassword = '0auphf2xNLEiHPcBW5GMUk18XFnlh/ZdhDb37bOErU+ACRBPT1Zw';
+const acrPassword = // put arc password
 const location = 'eastus';
 
 app.post('/create-container', async (req, res) => {
